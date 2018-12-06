@@ -40,6 +40,7 @@ func New(
 		coerce:          coerce.New(),
 		paramsValidator: params.NewValidator(),
 		InputSrcFactory: newInputSrcFactory(),
+		InputInterpolater: newInputInterpolater(),
 	}
 }
 
@@ -49,6 +50,7 @@ type _CLIParamSatisfier struct {
 	coerce          coerce.Coerce
 	paramsValidator params.Validator
 	InputSrcFactory
+	InputInterpolater
 }
 
 func (cps _CLIParamSatisfier) Satisfy(
@@ -71,6 +73,16 @@ func (cps _CLIParamSatisfier) Satisfy(
   Prompt for "%v" failed; running in non-interactive terminal
 -`, paramName)
 				cps.cliExiter.Exit(cliexiter.ExitReq{Message: msg, Code: 1})
+			}
+
+			if nil != rawArg {
+				interpolatedArg, err := cps.Interpolate(*rawArg)
+				if nil != err {
+					// param not satisfied; notify & re-attempt!
+					cps.notifyOfArgErrors([]error{err}, paramName)
+					continue
+				}
+				rawArg = &interpolatedArg
 			}
 
 			switch {
